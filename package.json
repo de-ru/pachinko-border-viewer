@@ -1,0 +1,18 @@
+{
+  "name": "pachinko-border-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+
+  "scripts": {
+    "update": "node scripts/build-json.mjs && node scripts/build-sw.mjs"
+  },
+
+  "dependencies": {
+    "cheerio": "^1.1.2"
+  },
+
+  "engines": {
+    "node": ">=22"
+  }
+}
