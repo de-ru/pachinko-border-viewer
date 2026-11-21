@@ -40,6 +40,22 @@ function normalize(text) {
     .replace(/ー/g, "")
     .replace(/\s+/g, "");
 }
+function getMachineUrl(machine) {
+
+  // URL一致済み
+  if (machine.chonboUrl) {
+    return machine.chonboUrl;
+  }
+
+  // フォールバック検索
+  return (
+    "https://www.google.com/search?q=" +
+    encodeURIComponent(
+      "site:chonborista.com " +
+      machine.name
+    )
+  );
+}
 
 function buildSearchTerms(machineName) {
   const normalized = normalize(machineName);
@@ -114,23 +130,102 @@ function createRow(label, value, extraClass = "") {
   `;
 }
 
+function createRow(label, value, extraClass = "") {
+  return `
+    <div class="label">${label}</div>
+    <div class="value ${extraClass}">${value}</div>
+  `;
+}
+
+function getMachineUrl(machine) {
+
+  if (machine.chonboUrl) {
+    return machine.chonboUrl;
+  }
+
+  return (
+    "https://www.google.com/search?q=" +
+    encodeURIComponent(
+      "site:chonborista.com " +
+      machine.name
+    )
+  );
+}
+
 function createCard(machine, customRate) {
-  const border25 = getBorder(machine, 25);
-  const border275 = getBorder(machine, 27.5);
-  const customBorder = getBorder(machine, customRate);
+
+  const border25 =
+    getBorder(machine, 25);
+
+  const border275 =
+    getBorder(machine, 27.5);
+
+  const customBorder =
+    getBorder(machine, customRate);
+
+  const oneYen100 =
+    border25 * 4;
+
+  const oneYen110 =
+    border275 * 4;
+
+  const url =
+    getMachineUrl(machine);
+
+  const hasDirectUrl =
+    !!machine.chonboUrl;
 
   return `
     <article class="card">
-      <a class="name" href="${machine.chonboUrl || '#'}" target="_blank" rel="noopener noreferrer">
+
+      <a
+        class="name"
+        href="${url}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         ${machine.name}
+
+        <span class="link-type">
+          ${
+            hasDirectUrl
+              ? "📖"
+              : "🔍"
+          }
+        </span>
+
       </a>
+
       <div class="grid">
-        ${createRow("4円 25玉", border25.toFixed(1))}
-        ${createRow("4円 27.5玉", border275.toFixed(1))}
-        ${createRow("1円 100玉", (border25 * 4).toFixed(1))}
-        ${createRow("1円 110玉", (border275 * 4).toFixed(1))}
-        ${createRow("手動", customBorder.toFixed(1), "manual")}
+
+        ${createRow(
+          "4円 25玉",
+          border25.toFixed(1)
+        )}
+
+        ${createRow(
+          "4円 27.5玉",
+          border275.toFixed(1)
+        )}
+
+        ${createRow(
+          "1円 100玉",
+          (oneYen100).toFixed(1)
+        )}
+
+        ${createRow(
+          "1円 110玉",
+          (oneYen110).toFixed(1)
+        )}
+
+        ${createRow(
+          "手動",
+          customBorder.toFixed(1),
+          "manual"
+        )}
+
       </div>
+
     </article>
   `;
 }
