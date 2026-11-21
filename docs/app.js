@@ -107,11 +107,12 @@ function createRow(label, value, extraClass = "") {
 }
 
 function getMachineUrl(machine) {
-  if (machine.chonboUrl) return machine.chonboUrl;
 
   return (
     "https://www.google.com/search?q=" +
-    encodeURIComponent("site:chonborista.com " + machine.name)
+    encodeURIComponent(
+      machine.name
+    )
   );
 }
 
@@ -121,13 +122,12 @@ function createCard(machine, customRate) {
   const customBorder = getBorder(machine, customRate);
 
   const url = getMachineUrl(machine);
-  const hasDirectUrl = !!machine.chonboUrl;
-
+  
   return `
     <article class="card">
       <a class="name" href="${url}" target="_blank" rel="noopener noreferrer">
         ${machine.name}
-        <span class="link-type">${hasDirectUrl ? "📖" : "🔍"}</span>
+        <span class="link-type"> 🔍</span>
       </a>
       <div class="grid">
         ${createRow("4円 25玉", border25.toFixed(1))}
