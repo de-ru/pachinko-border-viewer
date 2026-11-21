@@ -1,0 +1,122 @@
+name: Update Border Data
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # 毎週日曜 09:00 JST
+    - cron: "0 0 * * 0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: border-update
+  cancel-in-progress: true
+
+jobs:
+
+  update:
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Generate Data
+        run: npm run update
+
+      - name: Verify Output Files
+        run: |
+          test -f docs/machines.json
+          test -f docs/version.json
+          test -f docs/sw.js
+
+      - name: Validate machines.json
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from "fs";
+
+          const data =
+            JSON.parse(
+              fs.readFileSync(
+                "./docs/machines.json",
+                "utf8"
+              )
+            );
+
+          if (!Array.isArray(data)) {
+            throw new Error(
+              "machines.json is not array"
+            );
+          }
+
+          if (data.length < 300) {
+            throw new Error(
+              `Machine count abnormal: ${data.length}`
+            );
+          }
+
+          const invalid =
+            data.filter(
+              x =>
+                !x.name ||
+                !x.borders ||
+                !x.borders["25"] ||
+                !x.borders["28"] ||
+                !x.borders["30"] ||
+                !x.borders["33"] ||
+                !x.borders["40"]
+            );
+
+          if (invalid.length > 0) {
+            throw new Error(
+              `Invalid machine count: ${invalid.length}`
+            );
+          }
+
+          console.log(
+            `Machine Count: ${data.length}`
+          );
+          EOF
+
+      - name: Show Version
+        run: |
+          cat docs/version.json
+
+      - name: Commit Changes
+        run: |
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/machines.json
+          git add docs/version.json
+          git add docs/sw.js
+
+          git diff --cached --quiet && exit 0
+
+          git commit -m "weekly border update"
+
+          git push
+
+      - name: Upload Debug Files
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            docs/
+            scripts/
