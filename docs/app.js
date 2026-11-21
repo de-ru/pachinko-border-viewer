@@ -140,6 +140,42 @@ function createCard(machine, customRate) {
   `;
 }
 
+async function loadVersion() {
+
+  try {
+
+    const version =
+      await fetch(
+        "./version.json",
+        {
+          cache: "no-store"
+        }
+      )
+      .then(r => r.json());
+
+    const date =
+      new Date(
+        version.generatedAt
+      );
+
+    document
+      .getElementById(
+        "lastUpdate"
+      )
+      .textContent =
+      `更新: ${date.toLocaleString("ja-JP")}`;
+
+  } catch {
+
+    document
+      .getElementById(
+        "lastUpdate"
+      )
+      .textContent =
+      "更新日時取得失敗";
+  }
+}
+
 function render() {
   const keyword = document.getElementById("search").value;
   const customRate = Number(document.getElementById("custom").value) || 27.5;
@@ -159,14 +195,32 @@ function render() {
 }
 
 async function initialize() {
+
   await checkVersion();
 
-  machines = await fetch("./machines.json").then(r => r.json());
+  await loadVersion();
+
+  machines =
+    await fetch(
+      "./machines.json"
+    )
+    .then(r => r.json());
 
   initializeSearch();
 
-  document.getElementById("search").addEventListener("input", render);
-  document.getElementById("custom").addEventListener("input", render);
+  document
+    .getElementById("search")
+    .addEventListener(
+      "input",
+      render
+    );
+
+  document
+    .getElementById("custom")
+    .addEventListener(
+      "input",
+      render
+    );
 
   render();
 }
