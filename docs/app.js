@@ -5,10 +5,7 @@ let fuse = null;
 
 async function checkVersion() {
   try {
-    const latest = await fetch("./version.json", {
-      cache: "no-store"
-    }).then(r => r.json());
-
+    const latest = await fetch("./version.json", { cache: "no-store" }).then(r => r.json());
     const currentVersion = localStorage.getItem("app-version");
 
     if (currentVersion && currentVersion !== latest.contentHash) {
@@ -34,34 +31,16 @@ function normalize(text) {
     .replace(/^(e|p|pa|pf|cr|cra)/i, "")
     .replace(/^フィーバー/, "")
     .replace(/^ぱちんこ/, "")
-    .replace(/\blt\b/gi, "")
+    .replace(/lt/gi, "")
     .replace(/[【】\[\]（）()]/g, "")
     .replace(/[・:：]/g, "")
     .replace(/ー/g, "")
     .replace(/\s+/g, "");
 }
-function getMachineUrl(machine) {
-
-  // URL一致済み
-  if (machine.chonboUrl) {
-    return machine.chonboUrl;
-  }
-
-  // フォールバック検索
-  return (
-    "https://www.google.com/search?q=" +
-    encodeURIComponent(
-      "site:chonborista.com " +
-      machine.name
-    )
-  );
-}
 
 function buildSearchTerms(machineName) {
   const normalized = normalize(machineName);
-  const terms = new Set();
-
-  terms.add(normalized);
+  const terms = new Set([normalized]);
 
   for (let length = 2; length <= 4; length++) {
     for (let i = 0; i <= normalized.length - length; i++) {
@@ -90,10 +69,7 @@ function initializeSearch() {
 }
 
 function searchMachines(keyword) {
-  if (!keyword || !keyword.trim()) {
-    return machines;
-  }
-
+  if (!keyword || !keyword.trim()) return machines;
   return fuse.search(normalize(keyword)).map(result => result.item);
 }
 
@@ -131,94 +107,35 @@ function createRow(label, value, extraClass = "") {
 }
 
 function getMachineUrl(machine) {
-
-  if (machine.chonboUrl) {
-    return machine.chonboUrl;
-  }
+  if (machine.chonboUrl) return machine.chonboUrl;
 
   return (
     "https://www.google.com/search?q=" +
-    encodeURIComponent(
-      "site:chonborista.com " +
-      machine.name
-    )
+    encodeURIComponent("site:chonborista.com " + machine.name)
   );
 }
 
 function createCard(machine, customRate) {
+  const border25 = getBorder(machine, 25);
+  const border275 = getBorder(machine, 27.5);
+  const customBorder = getBorder(machine, customRate);
 
-  const border25 =
-    getBorder(machine, 25);
-
-  const border275 =
-    getBorder(machine, 27.5);
-
-  const customBorder =
-    getBorder(machine, customRate);
-
-  const oneYen100 =
-    border25 * 4;
-
-  const oneYen110 =
-    border275 * 4;
-
-  const url =
-    getMachineUrl(machine);
-
-  const hasDirectUrl =
-    !!machine.chonboUrl;
+  const url = getMachineUrl(machine);
+  const hasDirectUrl = !!machine.chonboUrl;
 
   return `
     <article class="card">
-
-      <a
-        class="name"
-        href="${url}"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a class="name" href="${url}" target="_blank" rel="noopener noreferrer">
         ${machine.name}
-
-        <span class="link-type">
-          ${
-            hasDirectUrl
-              ? "📖"
-              : "🔍"
-          }
-        </span>
-
+        <span class="link-type">${hasDirectUrl ? "📖" : "🔍"}</span>
       </a>
-
       <div class="grid">
-
-        ${createRow(
-          "4円 25玉",
-          border25.toFixed(1)
-        )}
-
-        ${createRow(
-          "4円 27.5玉",
-          border275.toFixed(1)
-        )}
-
-        ${createRow(
-          "1円 100玉",
-          (oneYen100).toFixed(1)
-        )}
-
-        ${createRow(
-          "1円 110玉",
-          (oneYen110).toFixed(1)
-        )}
-
-        ${createRow(
-          "手動",
-          customBorder.toFixed(1),
-          "manual"
-        )}
-
+        ${createRow("4円 25玉", border25.toFixed(1))}
+        ${createRow("4円 27.5玉", border275.toFixed(1))}
+        ${createRow("1円 100玉", (border25 * 4).toFixed(1))}
+        ${createRow("1円 110玉", (border275 * 4).toFixed(1))}
+        ${createRow("手動", customBorder.toFixed(1), "manual")}
       </div>
-
     </article>
   `;
 }
@@ -238,9 +155,7 @@ function render() {
     return;
   }
 
-  container.innerHTML = filtered
-    .map(machine => createCard(machine, customRate))
-    .join("");
+  container.innerHTML = filtered.map(machine => createCard(machine, customRate)).join("");
 }
 
 async function initialize() {
