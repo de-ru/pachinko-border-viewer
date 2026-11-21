@@ -130,13 +130,6 @@ function createRow(label, value, extraClass = "") {
   `;
 }
 
-function createRow(label, value, extraClass = "") {
-  return `
-    <div class="label">${label}</div>
-    <div class="value ${extraClass}">${value}</div>
-  `;
-}
-
 function getMachineUrl(machine) {
 
   if (machine.chonboUrl) {
