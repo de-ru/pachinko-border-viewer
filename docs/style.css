@@ -162,6 +162,10 @@ body {
   margin-bottom: 12px;
 }
 
+.link-type {
+  margin-left: 4px;
+  font-size: 0.9rem;
+}
 .name:hover {
 
   text-decoration: underline;
