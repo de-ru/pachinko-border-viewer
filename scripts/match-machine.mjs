@@ -33,8 +33,21 @@ export function matchMachines(
           machine.name
         );
 
-      const url =
-        map.get(key) ??
+      let url = map.get(key);
+
+if (!url) {
+
+  for (const [name, value] of map) {
+
+    if (
+      name.includes(key) ||
+      key.includes(name)
+    ) {
+      url = value;
+      break;
+    }
+  }
+}
         null;
 
       return {
