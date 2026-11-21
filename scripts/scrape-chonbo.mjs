@@ -6,12 +6,11 @@ const SOURCE_URL =
 function trimDate(text) {
 
   return text
-
     .replace(
       /\d{4}\/\d{1,2}\/\d{1,2}.*/,
       ""
     )
-
+    .replace(/\d+$/, "")
     .trim();
 }
 
