@@ -1,116 +1,131 @@
 import * as cheerio from "cheerio";
 
 const SOURCE_URL = "https://p-town.dmm.com/machine_borders";
-const RATE_TO_BALLS = {
-  "4.0": 25,
-  "3.5": 28,
-  "3.3": 30,
-  "3.0": 33,
-  "2.5": 40
-};
+const READER_URL = `https://r.jina.ai/http://${new URL(SOURCE_URL).host}${new URL(SOURCE_URL).pathname}`;
+const RATE_TO_BALLS = { "4.0": 25, "3.5": 28, "3.3": 30, "3.0": 33, "2.5": 40 };
 
-function cleanupMachineName(name) {
-  return String(name)
-    .replace(/\s+/g, " ")
+function normalizeText(value) {
+  return String(value)
+    .replace(/\u00a0/g, " ")
+    .replace(/[\r\t]+/g, " ")
+    .replace(/[ \f\v]+/g, " ")
     .trim();
 }
 
-function normalizeText(text) {
-  return String(text)
-    .replace(/\u00a0/g, " ")
-    .replace(/[\r\n\t]+/g, " ")
+function cleanupMachineName(value) {
+  return normalizeText(value)
+    .replace(/^#{1,6}\s*/, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function extractBorders(text) {
-  const normalized = normalizeText(text);
+  const normalized = normalizeText(text).replace(/\n+/g, " ");
   const borders = {};
 
   for (const [rate, balls] of Object.entries(RATE_TO_BALLS)) {
-    // 例: 4.0円（25個）…17.4回転
-    // 三点リーダー、全角/半角括弧、空白の差を許容する。
+    const escapedRate = rate.replace(".", "\\.");
     const pattern = new RegExp(
-      `${rate.replace(".", "\\.")}\\s*円\\s*[（(]\\s*${balls}\\s*個\\s*[）)]` +
-        `[^0-9]{0,30}(\\d+(?:\\.\\d+)?)\\s*回転`
+      `${escapedRate}\\s*円\\s*[（(]\\s*${balls}\\s*個\\s*[）)]` +
+      `[^0-9]{0,40}(\\d+(?:\\.\\d+)?)\\s*回転`
     );
     const match = normalized.match(pattern);
-
-    if (match) {
-      borders[balls] = Number(match[1]);
-    }
+    if (match) borders[balls] = Number(match[1]);
   }
 
-  return Object.keys(borders).length === Object.keys(RATE_TO_BALLS).length
-    ? borders
-    : null;
+  return Object.keys(borders).length === 5 ? borders : null;
 }
 
-function findMachineBlock($, heading) {
-  let node = $(heading);
-
-  // 見出しを含み、5交換率すべてを含む最小の親要素を採用する。
-  for (let depth = 0; depth < 8 && node.length; depth += 1) {
-    const text = normalizeText(node.text());
-    const hasAllRates = Object.entries(RATE_TO_BALLS).every(
-      ([rate, balls]) =>
-        text.includes(`${rate}円`) &&
-        (text.includes(`（${balls}個）`) || text.includes(`(${balls}個)`))
-    );
-
-    if (hasAllRates) {
-      return text;
-    }
-
-    node = node.parent();
-  }
-
-  return null;
-}
-
-export async function scrapeBorders() {
-  const response = await fetch(SOURCE_URL, {
+async function fetchText(url, accept = "text/html") {
+  const response = await fetch(url, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(30000),
     headers: {
-      "user-agent":
-        "Mozilla/5.0 (compatible; BorderDataBot/1.0; +https://p-town.dmm.com/)"
+      accept,
+      "accept-language": "ja,en-US;q=0.8,en;q=0.6",
+      "cache-control": "no-cache",
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36"
     }
   });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  return response.text();
+}
 
-  if (!response.ok) {
-    throw new Error(`Fetch failed: ${response.status} ${response.statusText}`);
-  }
-
-  const html = await response.text();
+function parseHtml(html) {
   const $ = cheerio.load(html);
   const machines = [];
   const seen = new Set();
 
-  // DMMぱちタウンでは機種名が見出しとして掲載されている。
   $("h2, h3, h4, h5").each((_, heading) => {
     const name = cleanupMachineName($(heading).text());
-    if (!name || seen.has(name)) {
-      return;
+    if (!name || seen.has(name)) return;
+
+    let node = $(heading);
+    let borders = null;
+    for (let depth = 0; depth < 8 && node.length && !borders; depth += 1) {
+      borders = extractBorders(node.text());
+      node = node.parent();
     }
 
-    const blockText = findMachineBlock($, heading);
-    if (!blockText) {
-      return;
+    if (borders) {
+      machines.push({ name, borders });
+      seen.add(name);
     }
-
-    const borders = extractBorders(blockText);
-    if (!borders) {
-      return;
-    }
-
-    machines.push({ name, borders });
-    seen.add(name);
   });
 
-  if (machines.length === 0) {
-    throw new Error(
-      "No machines extracted. The source page structure may have changed."
-    );
+  return machines;
+}
+
+function parseReaderMarkdown(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const machines = [];
+  const seen = new Set();
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const heading = lines[i].match(/^###\s+(.+?)\s*$/);
+    if (!heading) continue;
+
+    const name = cleanupMachineName(heading[1]);
+    if (!name || seen.has(name)) continue;
+
+    const chunk = [];
+    for (let j = i + 1; j < lines.length && !/^###\s+/.test(lines[j]); j += 1) {
+      chunk.push(lines[j]);
+    }
+
+    const borders = extractBorders(chunk.join("\n"));
+    if (borders) {
+      machines.push({ name, borders });
+      seen.add(name);
+    }
   }
 
   return machines;
+}
+
+export async function scrapeBorders() {
+  let directError;
+
+  try {
+    const html = await fetchText(SOURCE_URL);
+    const machines = parseHtml(html);
+    if (machines.length > 0) return machines;
+    directError = new Error("Direct response contained no machine data");
+  } catch (error) {
+    directError = error;
+  }
+
+  // DMM may return 403 to GitHub Actions/datacenter IPs. Jina Reader is used only
+  // as a read-only fallback and still reads the same SOURCE_URL.
+  try {
+    const markdown = await fetchText(READER_URL, "text/plain");
+    const machines = parseReaderMarkdown(markdown);
+    if (machines.length > 0) return machines;
+    throw new Error("Reader response contained no machine data");
+  } catch (readerError) {
+    throw new Error(
+      `Border data fetch failed. Direct: ${directError.message}; ` +
+      `reader fallback: ${readerError.message}`
+    );
+  }
 }
