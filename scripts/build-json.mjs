@@ -68,7 +68,7 @@ async function main() {
   );
 
   if (
-    urlRate < 50
+    urlRate < 10
   ) {
 
     throw new Error(
