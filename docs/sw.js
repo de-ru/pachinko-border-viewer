@@ -1,20 +1,14 @@
+
 const CACHE_NAME =
-  "border-initial";
+"border-99b6022fbf42";
 
 const STATIC_FILES = [
-
   "./",
-
   "./index.html",
-
   "./style.css",
-
   "./app.js",
-
   "./manifest.json",
-
   "./offline.html",
-
   "./version.json"
 ];
 
@@ -87,7 +81,7 @@ async function networkFirst(
         request
       );
 
-    cache.put(
+    await cache.put(
       request,
       response.clone()
     );
@@ -126,20 +120,20 @@ async function staleWhileRevalidate(
     );
 
   const networkPromise =
-
     fetch(request)
 
-      .then(response => {
+    .then(response => {
 
-        cache.put(
-          request,
-          response.clone()
-        );
+      cache.put(
+        request,
+        response.clone()
+      );
 
-        return response;
-      })
+      return response;
 
-      .catch(() => null);
+    })
+
+    .catch(() => null);
 
   return (
     cached ||
