@@ -7,20 +7,12 @@ export function matchMachines(
   chonboMachines
 ) {
 
-  const map =
-    new Map();
+  const map = new Map();
 
-  for (
-    const machine
-    of chonboMachines
-  ) {
+  for (const machine of chonboMachines) {
 
     map.set(
-
-      normalize(
-        machine.name
-      ),
-
+      normalize(machine.name),
       machine.url
     );
   }
@@ -33,22 +25,27 @@ export function matchMachines(
           machine.name
         );
 
-      let url = map.get(key);
+      let url =
+        map.get(key);
 
-if (!url) {
+      // 部分一致フォールバック
+      if (!url) {
 
-  for (const [name, value] of map) {
+        for (
+          const [name, value]
+          of map
+        ) {
 
-    if (
-      name.includes(key) ||
-      key.includes(name)
-    ) {
-      url = value;
-      break;
-    }
-  }
-}
-        null;
+          if (
+            name.includes(key) ||
+            key.includes(name)
+          ) {
+
+            url = value;
+            break;
+          }
+        }
+      }
 
       return {
 
@@ -56,7 +53,7 @@ if (!url) {
           machine.name,
 
         chonboUrl:
-          url,
+          url ?? null,
 
         borders:
           machine.borders
